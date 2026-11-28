@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+using namespace std;
+
 // Shared word splitter. The HTML parser (indexing) and the QueryProcessor
 // (searching) MUST both use this, so a word is normalized identically on both
 // sides.
@@ -18,13 +20,13 @@
 //     encoded strings should not pollute the vocabulary)
 // Examples: "C++" -> c   "O(n log n)" -> o n log n   "don't" -> don t
 
-const std::size_t MAX_TOKEN_LENGTH = 50;
+const size_t MAX_TOKEN_LENGTH = 50;
 
 inline bool isWordChar(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 }
 
-// Own lowercase: std::tolower on a negative char (byte >= 128) is undefined.
+// Own lowercase: tolower on a negative char (byte >= 128) is undefined.
 inline char toLowerAscii(char c) {
     if (c >= 'A' && c <= 'Z') return static_cast<char>(c - 'A' + 'a');
     return c;
@@ -32,9 +34,9 @@ inline char toLowerAscii(char c) {
 
 // Splits text into normalized words and APPENDS them to outWords
 // (it does not clear it, so callers may call it repeatedly).
-inline void tokenizeText(const std::string& text, std::vector<std::string>& outWords) {
-    std::string current;
-    for (std::size_t i = 0; i < text.size(); i++) {
+inline void tokenizeText(const string& text, vector<string>& outWords) {
+    string current;
+    for (size_t i = 0; i < text.size(); i++) {
         char c = text[i];
         if (isWordChar(c)) {
             if (current.size() <= MAX_TOKEN_LENGTH)      // stop growing garbage words
@@ -50,8 +52,8 @@ inline void tokenizeText(const std::string& text, std::vector<std::string>& outW
 }
 
 // Convenience wrapper that returns a fresh vector.
-inline std::vector<std::string> tokenize(const std::string& text) {
-    std::vector<std::string> words;
+inline vector<string> tokenize(const string& text) {
+    vector<string> words;
     tokenizeText(text, words);
     return words;
 }

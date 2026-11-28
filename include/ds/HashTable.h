@@ -1,13 +1,17 @@
-#pragma once
+#ifndef HASHTABLE_H
+#define HASHTABLE_H
+
 #include <string>
 #include <vector>
 #include "ds/LinkedList.h"
 
+using namespace std;
+
 // Hash functions. A hasher is a small class with operator()(key) -> number.
 template <typename K> struct DefaultHash;
 
-template <> struct DefaultHash<std::string> {
-    unsigned long long operator()(const std::string& s) const {
+template <> struct DefaultHash<string> {
+    unsigned long long operator()(const string& s) const {
         unsigned long long h = 0;                       // polynomial hash
         for (size_t i = 0; i < s.size(); i++)
             h = h * 31 + static_cast<unsigned char>(s[i]);
@@ -35,7 +39,7 @@ private:
         Entry(const K& k, const V& v) : key(k), value(v) {}
     };
 
-    std::vector< LinkedList<Entry> > buckets_;
+    vector< LinkedList<Entry> > buckets_;
     int size_;
     Hash hash_;
 
@@ -44,7 +48,7 @@ private:
     }
 
     void rehash(int newBucketCount) {
-        std::vector< LinkedList<Entry> > bigger(newBucketCount);
+        vector< LinkedList<Entry> > bigger(newBucketCount);
         for (size_t b = 0; b < buckets_.size(); b++) {
             for (typename LinkedList<Entry>::node* n = buckets_[b].getHead(); n; n = n->next)
                 bigger[indexFor(n->data.key, newBucketCount)].pushFront(n->data);
@@ -124,3 +128,4 @@ public:
     }
 };
 
+#endif
