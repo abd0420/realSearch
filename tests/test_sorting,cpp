@@ -1,0 +1,86 @@
+#include <iostream>
+#include <vector>
+#include "algo/Sorting.h"
+
+static int failures = 0;
+#define CHECK(cond) do { if (!(cond)) { failures++; \
+    std::cout << "FAIL line " << __LINE__ << ": " #cond "\n"; } } while (0)
+
+static Result R(DocId d, double s) { Result r; r.doc = d; r.score = s; return r; }
+
+static bool isSorted(const std::vector<Result>& v) {
+    for (size_t i = 1; i < v.size(); i++)
+        if (resultComesBefore(v[i], v[i - 1])) return false;
+    return true;
+}
+
+// Docs are 0..n-1, so a permutation check is: every doc appears once with its original score.
+static bool samePermutation(const std::vector<Result>& before, const std::vector<Result>& after) {
+    if (before.size() != after.size()) return false;
+    std::vector<int> seen(before.size(), 0);
+    for (size_t i = 0; i < after.size(); i++) {
+        DocId d = after[i].doc;
+        if (d < 0 || d >= static_cast<int>(before.size()) || seen[d]) return false;
+        seen[d] = 1;
+        if (before[d].score != after[i].score) return false;
+    }
+    return true;
+}
+
+static unsigned long long rng = 12345;
+static unsigned int nextRand() { rng = rng * 6364136223846793005ULL + 1442695040888963407ULL; return static_cast<unsigned int>(rng >> 33); }
+
+int main() {
+    // ordering rule
+    CHECK(resultComesBefore(R(5, 0.9), R(1, 0.5)));
+    CHECK(!resultComesBefore(R(1, 0.5), R(5, 0.9)));
+    CHECK(resultComesBefore(R(1, 0.5), R(2, 0.5)));      // tie: smaller DocId first
+    CHECK(!resultComesBefore(R(2, 0.5), R(2, 0.5)));     // equal is not "before"
+
+    // hand-checked small case
+    std::vector<Result> a;
+    a.push_back(R(0, 0.81)); a.push_back(R(1, 0.0)); a.push_back(R(2, 0.405)); a.push_back(R(3, 0.81));
+    mergeSortResults(a);
+    CHECK(a.size() == 4 && a[0].doc == 0 && a[1].doc == 3 && a[2].doc == 2 && a[3].doc == 1);
+
+    // empty and single
+    std::vector<Result> e; mergeSortResults(e); CHECK(e.empty());
+    std::vector<Result> one(1, R(7, 1.5)); mergeSortResults(one); CHECK(one.size() == 1 && one[0].doc == 7);
+
+    // all equal scores -> ordered by DocId
+    std::vector<Result> same;
+    for (int d = 9; d >= 0; d--) same.push_back(R(d, 2.0));
+    mergeSortResults(same);
+    bool byDoc = true; for (int i = 0; i < 10; i++) if (same[i].doc != i) byDoc = false;
+    CHECK(byDoc);
+
+    // already sorted and reverse sorted
+    std::vector<Result> up, down;
+    for (int d = 0; d < 1000; d++) { up.push_back(R(d, 1000 - d)); down.push_back(R(d, d)); }
+    std::vector<Result> up0 = up, down0 = down;
+    mergeSortResults(up); mergeSortResults(down);
+    CHECK(isSorted(up) && samePermutation(up0, up));
+    CHECK(isSorted(down) && samePermutation(down0, down) && down[0].doc == 999);
+
+    // 100,000 random results with many ties
+    std::vector<Result> big;
+    for (int d = 0; d < 100000; d++) big.push_back(R(d, (nextRand() % 50) / 10.0));
+    std::vector<Result> big0 = big;
+    mergeSortResults(big);
+    CHECK(isSorted(big) && samePermutation(big0, big));
+
+    // getTopK
+    std::vector<Result> c;
+    for (int d = 0; d < 10; d++) c.push_back(R(d, d * 1.0));
+    std::vector<Result> top3 = getTopK(c, 3);
+    CHECK(top3.size() == 3 && top3[0].doc == 9 && top3[1].doc == 8 && top3[2].doc == 7);
+    CHECK(c.size() == 10 && c[0].doc == 0);                   // caller's vector unchanged
+    CHECK(getTopK(c, 0).empty() && getTopK(c, -4).empty());
+    CHECK(getTopK(c, 10).size() == 10 && getTopK(c, 1000).size() == 10);
+    CHECK(getTopK(std::vector<Result>(), 5).empty());
+    std::vector<Result> topBig = getTopK(big0, 10);
+    CHECK(topBig.size() == 10 && isSorted(topBig) && topBig[0].score == 4.9);
+
+    std::cout << (failures == 0 ? "All sorting tests passed.\n" : "Some sorting checks FAILED.\n");
+    return failures == 0 ? 0 : 1;
+}
